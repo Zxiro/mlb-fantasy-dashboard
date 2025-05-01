@@ -17,9 +17,10 @@ function DashboardPage() {
       try {
         // Only try the authenticated endpoint if we have a user
         if (user) {
+          const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
           try {
             // Try the authenticated endpoint
-            const authResponse = await axios.get('http://localhost:5001/api/leagues', {
+            const authResponse = await axios.get(`${API_URL}/api/leagues`, {
               withCredentials: true
             });
             // If successful, use the real data
@@ -27,7 +28,7 @@ function DashboardPage() {
               setLeagues(authResponse.data);
             } else {
               // Fallback to public data if no leagues found
-              const response = await axios.get('http://localhost:5001/api/leagues/public', {
+              const response = await axios.get(`${API_URL}/api/leagues/public`, {
                 withCredentials: true
               });
               setLeagues(response.data || []);
@@ -35,7 +36,7 @@ function DashboardPage() {
           } catch (authErr) {
             console.warn('Authenticated endpoint failed:', authErr.message);
             // Try the public endpoint as fallback
-            const response = await axios.get('http://localhost:5001/api/leagues/public', {
+            const response = await axios.get(`${API_URL}/api/leagues/public`, {
               withCredentials: true
             });
             setLeagues(response.data || []);

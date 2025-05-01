@@ -16,7 +16,8 @@ const app = express();
 
 // CORS Middleware - Allow requests from the frontend origin
 app.use(cors({
-  origin: 'http://localhost:3000', // Allow the frontend origin
+  //origin: 'http://localhost:3000', // Allow the frontend origin
+  origin: process.env.FRONTEND_URL || 'https://mlb-fantasy-dashboard.vercel.app', // Use environment variable for frontend URL
   credentials: true // Allow cookies/session info to be sent
 }));
 
