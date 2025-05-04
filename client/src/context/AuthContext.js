@@ -10,21 +10,44 @@ const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastChecked, setLastChecked] = useState(0); // Track when auth was last checked
+  const [retryCount, setRetryCount] = useState(0); // Track retry attempts
 
   // Function to check authentication status using the new /status endpoint
-  const checkAuthStatus = useCallback(async () => {
+  const checkAuthStatus = useCallback(async (forceCheck = false) => {
+    // Only check if we haven't checked recently (within 2 seconds) unless forced
+    const now = Date.now();
+    if (!forceCheck && now - lastChecked < 2000) {
+      console.log('Auth check skipped - checked recently');
+      return; // Skip checking if checked recently and not forced
+    }
+    
     setLoading(true);
     try {
+      console.log('Checking auth status, force=', forceCheck);
+      
       // Use the new /api/auth/status endpoint
-      const response = await apiService.get('/api/auth/status');
+      const response = await apiService.get('/api/auth/status', {
+        // 確保發送 credentials
+        withCredentials: true,
+        headers: {
+          // 添加一個緩存破壞參數，以確保不會從緩存中獲取
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      console.log('Auth status response:', response.data);
       setIsAuthenticated(response.data.isAuthenticated);
+      setLastChecked(now); // Update last checked timestamp
+      setRetryCount(0); // Reset retry counter on successful check
       
       // If authenticated, fetch minimal user data
       if (response.data.isAuthenticated) {
         try {
           const userResponse = await apiService.get('/api/auth/user');
           setUser({
-            displayName: 'Yahoo Fantasy User', // Placeholder since we don't have DB
+            displayName: 'Yahoo Fantasy User',
             yahooId: 'Yahoo User',
             isAuthenticated: true
           });
@@ -34,6 +57,14 @@ const AuthProvider = ({ children }) => {
           setUser({ displayName: 'Yahoo User', isAuthenticated: true });
         }
       } else {
+        // 如果在驗證頁面且不是強制檢查，嘗試重試幾次（伺服器可能需要時間保存會話）
+        const isAuthSuccessPage = window.location.pathname.includes('/auth-success');
+        if (isAuthSuccessPage && !forceCheck && retryCount < 3) {
+          console.log(`Auth check failed on auth-success page. Retry attempt ${retryCount + 1}/3 in 1.5 seconds`);
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => checkAuthStatus(true), 1500); // 重試，強制檢查
+        }
+        
         setUser(null);
       }
     } catch (error) {
@@ -43,7 +74,7 @@ const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lastChecked, retryCount]);
 
   useEffect(() => {
     checkAuthStatus();

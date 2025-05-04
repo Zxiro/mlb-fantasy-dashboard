@@ -9,7 +9,8 @@ import {
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import LeaguePage from './pages/LeaguePage';
-import AuthProvider, { useAuth } from './context/AuthContext'; // Auth context
+import AuthSuccessPage from './pages/AuthSuccessPage'; // Import the new page
+import AuthProvider, { useAuth } from './context/AuthContext';
 import './App.css';
 
 // A wrapper for routes that require authentication
@@ -17,7 +18,7 @@ function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading authentication status...</div>; // Or a spinner
+    return <div>Loading authentication status...</div>;
   }
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;
@@ -32,6 +33,9 @@ function App() {
           <div className="content-container">
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              
+              {/* Auth success route - non-protected */}
+              <Route path="/auth-success" element={<AuthSuccessPage />} />
 
               {/* Protected Routes */}
               <Route 

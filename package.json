@@ -1,0 +1,23 @@
+{
+    "name": "mlb-fantasy-dashboard",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start": "cd server && node server.js",
+        "build": "cd client && npm install && npm run build",
+        "vercel-build": "cd client && npm install && npm run build"
+    },
+    "dependencies": {
+        "cookie-parser": "^1.4.7",
+        "dotenv": "^16.0.3",
+        "express": "^4.17.1",
+        "railway": "^2.0.17"
+    },
+    "devDependencies": {
+        "http-proxy-middleware": "^3.0.5",
+        "vercel": "^23.0.0"
+    },
+    "engines": {
+        "node": ">=16.0.0"
+    }
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import './LoginPage.css'; // Import the new CSS file
+import './LoginPage.css';
 
 function LoginPage() {
   const [authCode, setAuthCode] = useState('');
@@ -15,10 +15,12 @@ function LoginPage() {
   useEffect(() => {
     if (!hasSetUrlRef.current) {
       const clientId = process.env.REACT_APP_YAHOO_CLIENT_ID;
+      console.log('DEBUG: Yahoo Client ID:', clientId); // Debug log for client ID
       if (!clientId) {
         setError('Yahoo Client ID is not configured in the frontend environment.');
         setYahooAuthUrl('#');
       } else {
+        // Using oob (out-of-band) as redirect URI to match server configuration
         const redirectUri = 'oob';
         const responseType = 'code';
         const scope = 'fspt-r';
@@ -37,21 +39,27 @@ function LoginPage() {
     if (errorCode && errorCode !== processedUrlErrorCodeRef.current) {
       processedUrlErrorCodeRef.current = errorCode;
 
-      let errorMessage = 'An unknown authentication error occurred.';
+      let errorMessage = '發生未知的驗證錯誤。';
       switch (errorCode) {
         case 'no_code':
-          errorMessage = 'Authorization code was missing.';
+          errorMessage = '缺少驗證碼。';
           break;
         case 'token_exchange_failed':
         case 'token_exchange_error':
-          errorMessage = 'Failed to exchange code for tokens with Yahoo.';
+          errorMessage = '無法用 Yahoo 交換授權碼為令牌。';
           break;
         case 'invalid_code':
         case 'invalid_grant':
-          errorMessage = 'The provided authorization code was invalid or expired.';
+          errorMessage = '提供的授權碼無效或已過期。';
+          break;
+        case 'redirect_uri_mismatch':
+          errorMessage = '重定向URI不匹配。請確保在 Yahoo 開發者控制台中設置了 "oob" 作為重定向 URI。';
+          break;
+        case 'invalid_client':
+          errorMessage = 'Yahoo API 憑證無效。請檢查您的 Client ID 和 Secret。';
           break;
         default:
-          errorMessage = `Authentication failed: ${errorCode}`;
+          errorMessage = `驗證失敗：${errorCode}`;
       }
       
       setError(errorMessage);
@@ -73,8 +81,8 @@ function LoginPage() {
     }
     setError('');
     processedUrlErrorCodeRef.current = null;
-    
-    const callbackUrl = `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/auth/yahoo/callback?code=${encodeURIComponent(authCode.trim())}`;
+    const callbackUrl = `${process.env.REACT_APP_API_URL}/api/auth/yahoo/callback?code=${encodeURIComponent(authCode.trim())}`;
+    console.log('DEBUG: Redirecting to callback URL:', callbackUrl); // Debug log for callback URL
     window.location.href = callbackUrl;
   };
 

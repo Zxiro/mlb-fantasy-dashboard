@@ -79,7 +79,7 @@ module.exports = {
     } else {
       // User has tokens, redirect them away from guest pages (like login)
       console.log('DEBUG: ensureGuest detected authenticated user, redirecting to dashboard.');
-      res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/dashboard');
+      res.redirect((process.env.FRONTEND_URL) + '/dashboard');
     }
   },
 };

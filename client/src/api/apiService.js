@@ -1,18 +1,40 @@
 import axios from 'axios';
 
 // Determine the API base URL based on environment
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_URL = process.env.REACT_APP_API_URL;
+console.log('API URL:', API_URL); // 調試用
+
+// 明確配置 axios 默認行為
+axios.defaults.withCredentials = true;
 
 // Create an axios instance with Yahoo Fantasy API capabilities
 const apiService = axios.create({
   baseURL: API_URL, // Backend server address from environment variable
   withCredentials: true, // Send cookies with requests (important for session handling)
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
+
+// 添加請求攔截器，確保每個請求都帶有憑證
+apiService.interceptors.request.use(
+  config => {
+    console.log(`Making ${config.method} request to ${config.url}`);
+    // 強制每個請求都包含 credentials
+    config.withCredentials = true;
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
 
 // Authentication error handling
 apiService.interceptors.response.use(
   response => response,
   error => {
+    console.log('API Error Response:', error.response ? error.response.status : 'No Response');
+    
     if (error.response && error.response.status === 401) {
       // If we get a 401, it means the session is invalid or expired.
       // Redirect to login page.

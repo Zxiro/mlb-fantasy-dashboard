@@ -19,7 +19,7 @@ function DashboardPage() {
         if (user) {
           try {
             // Try the authenticated endpoint
-            const authResponse = await axios.get('http://localhost:5001/api/leagues', {
+            const authResponse = await axios.get('https://mlb-fantasy-dashboard-production.up.railway.app/api/leagues', {
               withCredentials: true
             });
             // If successful, use the real data
@@ -27,7 +27,7 @@ function DashboardPage() {
               setLeagues(authResponse.data);
             } else {
               // Fallback to public data if no leagues found
-              const response = await axios.get('http://localhost:5001/api/leagues/public', {
+              const response = await axios.get('https://mlb-fantasy-dashboard-production.up.railway.app/api/leagues/public', {
                 withCredentials: true
               });
               setLeagues(response.data || []);
@@ -35,7 +35,7 @@ function DashboardPage() {
           } catch (authErr) {
             console.warn('Authenticated endpoint failed:', authErr.message);
             // Try the public endpoint as fallback
-            const response = await axios.get('http://localhost:5001/api/leagues/public', {
+            const response = await axios.get('https://mlb-fantasy-dashboard-production.up.railway.app/api/leagues/public', {
               withCredentials: true
             });
             setLeagues(response.data || []);

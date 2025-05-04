@@ -216,7 +216,7 @@ function LeaguePage() {
     };
 
     fetchRoster();
-  }, [myTeam, selectedWeek]); // Depend on myTeam and selectedWeek
+  }, [myTeam, selectedWeek, selectedManagerName]); // Depend on myTeam and selectedWeek
 
 
     // Fetch team matchup when the selected team and week are available

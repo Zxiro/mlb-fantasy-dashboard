@@ -7,10 +7,9 @@ const os = require('os');
 const XmlStream = require('xml-stream'); // Add this for streaming XML parsing
 
 const AUTH_ENDPOINT = 'https://api.login.yahoo.com/oauth2/get_token';
-// Ensure these are set in your .env file
 const CONSUMER_KEY = process.env.YAHOO_CLIENT_ID;
 const CONSUMER_SECRET = process.env.YAHOO_CLIENT_SECRET;
-const REDIRECT_URI = process.env.YAHOO_REDIRECT_URI || 'oob';
+const REDIRECT_URI = process.env.YAHOO_REDIRECT_URI
 const AUTH_HEADER = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
 
 
@@ -18,7 +17,10 @@ const AUTH_HEADER = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('
 const yahooApiService = {
   // Exchange authorization code for initial tokens
   getInitialAuthorization(authCode) {
-    console.log('Attempting initial authorization with code:', authCode); // Debug log
+    console.log('Attempting initial authorization with code:', authCode);
+    // 強制輸出重定向 URI 值，以便於調試
+    console.log('Using redirect URI:', REDIRECT_URI);
+    
     return axios({
       url: AUTH_ENDPOINT,
       method: 'post',
@@ -30,25 +32,30 @@ const yahooApiService = {
       data: qs.stringify({
         client_id: CONSUMER_KEY,
         client_secret: CONSUMER_SECRET,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: 'oob', // 強制使用 'oob' 作為重定向 URI
         code: authCode,
         grant_type: 'authorization_code',
       }),
     })
     .then(response => {
-        console.log('Initial authorization successful:', response.data); // Debug log
-        return response.data; // Return the token data
+        console.log('Initial authorization successful:', response.data);
+        return response.data;
     })
     .catch((err) => {
       console.error(`Error in getInitialAuthorization(): Status=${err.response?.status}`, err.response?.data || err.message);
-      // Rethrow or handle specific errors
+      // 添加更詳細的錯誤信息
+      if (err.response?.data?.error === 'INVALID_REDIRECT_URI') {
+        console.error('Yahoo 註冊的重定向 URI 與您提供的不匹配。請確保在 Yahoo 開發者控制台中註冊了 "oob"');
+      }
       throw new Error(`Failed to get initial authorization: ${err.response?.data?.error_description || err.message}`);
     });
   },
 
   // Refresh the authorization token
   refreshAuthorizationToken(refreshToken) {
-    console.log('Attempting to refresh token:', refreshToken); // Debug log
+    console.log('Attempting to refresh token:', refreshToken);
+    console.log('Using redirect URI for refresh:', REDIRECT_URI);
+    
     return axios({
       url: AUTH_ENDPOINT,
       method: 'post',
@@ -58,20 +65,23 @@ const yahooApiService = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36',
       },
       data: qs.stringify({
-        client_id: CONSUMER_KEY, // Client ID might be needed for refresh too
-        client_secret: CONSUMER_SECRET, // Client Secret might be needed
-        redirect_uri: REDIRECT_URI, // Or your configured callback URL
+        client_id: CONSUMER_KEY,
+        client_secret: CONSUMER_SECRET,
+        redirect_uri: 'oob', // 強制使用 'oob' 作為重定向 URI
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
       }),
     })
     .then(response => {
-        console.log('Token refresh successful:', response.data); // Debug log
-        return response.data; // Return the new token data
+        console.log('Token refresh successful:', response.data);
+        return response.data;
     })
     .catch((err) => {
       console.error(`Error in refreshAuthorizationToken(): Status=${err.response?.status}`, err.response?.data || err.message);
-      // Rethrow or handle specific errors like invalid refresh token
+      // 添加更詳細的錯誤信息
+      if (err.response?.data?.error === 'INVALID_REDIRECT_URI') {
+        console.error('Yahoo 註冊的重定向 URI 與您提供的不匹配。請確保在 Yahoo 開發者控制台中註冊了 "oob"');
+      }
       throw new Error(`Failed to refresh token: ${err.response?.data?.error_description || err.message}`);
     });
   },

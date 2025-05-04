@@ -9,11 +9,13 @@ const yahooApiService = require('../utils/yahooApiService'); // Import the new s
 // @access  Public
 router.get('/yahoo/callback', async (req, res) => {
   console.log('DEBUG: Received /api/auth/yahoo/callback request.');
+  console.log('DEBUG: Request cookies:', req.headers.cookie);
+  console.log('DEBUG: Session ID:', req.sessionID);
   const { code } = req.query;
 
   if (!code) {
     console.warn('WARN: No authorization code found in query.');
-    return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/login?error=no_code');
+    return res.redirect((process.env.FRONTEND_URL) + '/login?error=no_code');
   }
 
   try {
@@ -22,29 +24,90 @@ router.get('/yahoo/callback', async (req, res) => {
 
     if (tokenData && tokenData.access_token && tokenData.refresh_token) {
       console.log('DEBUG: Tokens received successfully. Storing in session.');
-      // Store tokens securely in the session
-      req.session.yahooTokens = {
+      
+      // 確保會話對象存在
+      if (!req.session) {
+        console.error('ERROR: Session object does not exist!');
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_session`);
+      }
+      
+      // 清除會話中可能存在的過期值
+      delete req.session.yahooTokens;
+      
+      // 創建一個新的 yahooTokens 對象
+      const tokens = {
         accessToken: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
-        expiresIn: tokenData.expires_in, // Store expiry time (in seconds)
-        tokenTimestamp: Date.now() // Store timestamp when token was received
+        expiresIn: tokenData.expires_in,
+        tokenTimestamp: Date.now()
       };
-
-      // Optionally, save user info if needed, but tokens are the priority
-      req.session.user = { yahooGuid: tokenData.xoauth_yahoo_guid }; // Example
-
-      console.log('DEBUG: Redirecting to dashboard.');
-      // Redirect to the frontend dashboard upon successful login
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`);
+      
+      // 存儲令牌到會話中
+      req.session.yahooTokens = tokens;
+      
+      // 設置額外的用戶信息
+      req.session.user = { yahooGuid: tokenData.xoauth_yahoo_guid || 'unknown' };
+      
+      console.log('DEBUG: Session ID before save:', req.sessionID);
+      console.log('DEBUG: Session cookie:', req.headers.cookie);
+      
+      // 在重定向之前強制保存會話
+      return new Promise((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error('ERROR: Failed to save session:', err);
+            return res.redirect(`${process.env.FRONTEND_URL}/login?error=session_save_error`);
+          }
+          
+          console.log('DEBUG: Session saved successfully with tokens.');
+          console.log('DEBUG: Session data after save:', {
+            id: req.sessionID,
+            hasTokens: !!req.session.yahooTokens,
+            user: req.session.user
+          });
+          
+          // Set cookie flags for better cross-site compatibility
+          res.cookie('connect.sid', req.sessionID, {
+            maxAge: req.session.cookie.maxAge,
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/'
+          });
+          
+          // 設置一個特殊的 cookie 標記認證狀態 (非安全方法，僅用於調試)
+          res.cookie('auth_debug', 'true', {
+            maxAge: 60000, // 1分鐘
+            httpOnly: false,
+            secure: true,
+            sameSite: 'none'
+          });
+          
+          // 重定向到認證成功頁面
+          res.redirect(`${process.env.FRONTEND_URL}/auth-success`);
+          resolve();
+        });
+      });
     } else {
       console.error('ERROR: Invalid token data received from Yahoo.', tokenData);
-      return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/login?error=token_exchange_failed');
+      return res.redirect((process.env.FRONTEND_URL ) + '/login?error=token_exchange_failed');
     }
   } catch (error) {
     console.error('ERROR: Failed to exchange authorization code:', error.message);
-    // Pass a more specific error if possible
-    const errorQuery = error.message.includes('invalid_grant') ? 'invalid_code' : 'token_exchange_error';
-    return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + `/login?error=${errorQuery}`);
+    // 改進錯誤處理 - 提供更具體的錯誤類型
+    let errorQuery = 'token_exchange_error';
+    
+    if (error.message.includes('invalid_grant')) {
+      errorQuery = 'invalid_code';
+    } else if (error.message.includes('Redirect URI')) {
+      errorQuery = 'redirect_uri_mismatch';
+      console.error('CRITICAL ERROR: Redirect URI mismatch detected. Please verify that your Yahoo Developer Console has "oob" configured as the redirect URI.');
+    } else if (error.message.includes('client_id')) {
+      errorQuery = 'invalid_client';
+      console.error('CRITICAL ERROR: Client ID/Secret issue detected. Please verify your Yahoo API credentials.');
+    }
+    
+    return res.redirect((process.env.FRONTEND_URL ) + `/login?error=${errorQuery}`);
   }
 });
 
@@ -52,18 +115,17 @@ router.get('/yahoo/callback', async (req, res) => {
 // @desc    Check user authentication status based on session tokens
 // @access  Public (or Private depending on needs)
 router.get('/status', (req, res) => {
+  console.log('DEBUG: Received /api/auth/status request. Session', req.session);
+  console.log('DEBUG: Session ID:', req.sessionID);
+  console.log('DEBUG: Cookies:', req.headers.cookie);
+  console.log('DEBUG: Session Cookie Settings:', req.session.cookie);
+  
   if (req.session.yahooTokens && req.session.yahooTokens.accessToken) {
-    // Basic check: token exists. Could add expiry check here.
-    // Expiry check example:
-    // const now = Date.now();
-    // const expiryTime = req.session.yahooTokens.tokenTimestamp + (req.session.yahooTokens.expiresIn * 1000);
-    // if (now < expiryTime - (60 * 1000)) { // Check if token expires in more than 60 seconds
-    //   res.json({ isAuthenticated: true });
-    // } else {
-    //   res.json({ isAuthenticated: false, reason: 'token_expired' });
-    // }
+    console.log('DEBUG: Session has valid tokens. User is authenticated.');
     res.json({ isAuthenticated: true });
   } else {
+    console.log('DEBUG: No valid tokens in session. User is NOT authenticated.');
+    console.log('DEBUG: Full session object:', JSON.stringify(req.session));
     res.json({ isAuthenticated: false });
   }
 });
@@ -90,7 +152,7 @@ router.get('/logout', (req, res, next) => { // ensureAuth might be removed if ca
       // Send success response instead of redirect, let frontend handle navigation
       res.status(200).json({ message: 'Logged out successfully' });
       // Or redirect if preferred:
-      // res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000/');
+      // res.redirect(process.env.FRONTEND_URL);
     });
   } else {
     // No session exists, arguably already logged out

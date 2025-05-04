@@ -20,6 +20,3 @@ exports.getUser = async (req, res) => {
     res.status(401).json({ message: 'Not authenticated' });
   }
 };
-
-// Note: All MongoDB-related functionality has been commented out as per requirements
-
