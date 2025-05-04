@@ -10,6 +10,7 @@ const AUTH_ENDPOINT = 'https://api.login.yahoo.com/oauth2/get_token';
 // Ensure these are set in your .env file
 const CONSUMER_KEY = process.env.YAHOO_CLIENT_ID;
 const CONSUMER_SECRET = process.env.YAHOO_CLIENT_SECRET;
+const REDIRECT_URI = process.env.YAHOO_REDIRECT_URI || 'oob';
 const AUTH_HEADER = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
 
 
@@ -29,7 +30,7 @@ const yahooApiService = {
       data: qs.stringify({
         client_id: CONSUMER_KEY,
         client_secret: CONSUMER_SECRET,
-        redirect_uri: 'oob',
+        redirect_uri: REDIRECT_URI,
         code: authCode,
         grant_type: 'authorization_code',
       }),
@@ -59,7 +60,7 @@ const yahooApiService = {
       data: qs.stringify({
         client_id: CONSUMER_KEY, // Client ID might be needed for refresh too
         client_secret: CONSUMER_SECRET, // Client Secret might be needed
-        redirect_uri: 'oob', // Or your configured callback URL
+        redirect_uri: REDIRECT_URI, // Or your configured callback URL
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
       }),

@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// Determine the API base URL based on environment
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+
 // Create an axios instance with Yahoo Fantasy API capabilities
 const apiService = axios.create({
-  baseURL: 'http://localhost:5001', // Backend server address
+  baseURL: API_URL, // Backend server address from environment variable
   withCredentials: true, // Send cookies with requests (important for session handling)
 });
 

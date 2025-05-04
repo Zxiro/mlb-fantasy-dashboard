@@ -35,7 +35,7 @@ router.get('/yahoo/callback', async (req, res) => {
 
       console.log('DEBUG: Redirecting to dashboard.');
       // Redirect to the frontend dashboard upon successful login
-      return res.redirect('http://localhost:3000/dashboard');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`);
     } else {
       console.error('ERROR: Invalid token data received from Yahoo.', tokenData);
       return res.redirect((process.env.FRONTEND_URL || 'http://localhost:3000') + '/login?error=token_exchange_failed');

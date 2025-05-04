@@ -16,7 +16,7 @@ const app = express();
 
 // CORS Middleware - Allow requests from the frontend origin
 app.use(cors({
-  origin: 'http://localhost:3000', // Allow the frontend origin
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Get frontend URL from env
   credentials: true // Allow cookies/session info to be sent
 }));
 
@@ -33,8 +33,10 @@ app.use(
     // Using memory store instead of MongoDB
     // Note: Memory store is not suitable for production as sessions are lost on server restart
     cookie: {
-        // secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-        maxAge: 1000 * 60 * 60 * 24 * 7 // Session expires in 7 days
+        secure: process.env.SECURE_COOKIE === 'true', // Use secure cookies in production
+        maxAge: 1000 * 60 * 60 * 24 * 7, // Session expires in 7 days
+        sameSite: process.env.SAME_SITE || 'lax',
+        domain: process.env.COOKIE_DOMAIN || undefined
     }
   })
 );
