@@ -1,10 +1,8 @@
 const express = require('express');
-// const connectDB = require('./config/db');
 const dotenv = require('dotenv');
 const session = require('express-session');
-// const MongoStore = require('connect-mongo');
-const path = require('path'); // Needed for serving static files
-const cors = require('cors'); // Import the cors middleware
+const path = require('path');
+const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
 // Load env vars
@@ -12,14 +10,34 @@ dotenv.config();
 
 const app = express();
 
-// Important: CORS configuration before all middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true, // Important for cookies/auth
+  origin: "https://mlb-fantasy-dashboard.vercel.app",
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'X-Requested-With', 'Cookie'],
   exposedHeaders: ['set-cookie']
 }));
+
+// 在生產環境中信任代理
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+// Sessions Middleware with enhanced configuration
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'mlb-fantasy-secret', // Use an environment variable for secret
+    resave: false,
+    saveUninitialized: false,
+    name: 'mlb.fantasy.sid',
+    cookie: {
+      secure: process.env.NODE_ENV === 'production', // Only use secure in production
+      maxAge: 1000 * 60 * 60 * 24 * 7, // Session expires in 7 days
+      sameSite: 'none', // Important: use 'none' not 'lax' to allow cross-domain cookies
+      httpOnly: true // Prevent client-side JavaScript from accessing cookies
+    }
+  })
+);
 
 // Request inspection middleware
 app.use((req, res, next) => {
@@ -38,23 +56,6 @@ app.use((req, res, next) => {
 app.use(express.json({ extended: false }));
 app.use(express.urlencoded({ extended: true })); // For form data if needed
 app.use(cookieParser()); // For parsing cookies
-// Sessions Middleware with enhanced configuration
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || 'keyboard cat', // Use an environment variable for secret
-    resave: true, // Keep as true to ensure session is always saved
-    saveUninitialized: true, // Changed to true to ensure session IDs are consistent
-    name: 'mlb.fantasy.sid', // Custom cookie name to avoid default name conflicts
-    cookie: {
-      secure: process.env.NODE_ENV === 'production', // Only use secure in production
-      maxAge: 1000 * 60 * 60 * 24 * 7, // Session expires in 7 days
-      sameSite: 'none', // Important: use 'none' not 'lax' to allow cross-domain cookies
-      httpOnly: true, // Prevent client-side JavaScript from accessing cookies
-      path: '/',
-      domain: undefined // Let browser automatically determine cookie domain
-    }
-  })
-);
 
 // Session debugging middleware
 app.use((req, res, next) => {

@@ -25,7 +25,7 @@ router.get('/yahoo/callback', async (req, res) => {
     if (tokenData && tokenData.access_token && tokenData.refresh_token) {
       console.log('DEBUG: Tokens received successfully. Storing in session.');
       
-      // 確保會話對象存在
+
       if (!req.session) {
         console.error('ERROR: Session object does not exist!');
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_session`);
@@ -50,7 +50,12 @@ router.get('/yahoo/callback', async (req, res) => {
       
       console.log('DEBUG: Session ID before save:', req.sessionID);
       console.log('DEBUG: Session cookie:', req.headers.cookie);
-      
+      console.log('DEBUG: Session data before save:', {
+        id: req.sessionID,
+        hasTokens: !!req.session.yahooTokens,
+        user: req.session.user
+      });
+      console.log('DEBUG: Tokens to be saved:', tokens);
       // 在重定向之前強制保存會話
       return new Promise((resolve, reject) => {
         req.session.save((err) => {
@@ -66,14 +71,6 @@ router.get('/yahoo/callback', async (req, res) => {
             user: req.session.user
           });
           
-          // Set cookie flags for better cross-site compatibility
-          res.cookie('connect.sid', req.sessionID, {
-            maxAge: req.session.cookie.maxAge,
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            path: '/'
-          });
           
           // 設置一個特殊的 cookie 標記認證狀態 (非安全方法，僅用於調試)
           res.cookie('auth_debug', 'true', {
@@ -83,8 +80,8 @@ router.get('/yahoo/callback', async (req, res) => {
             sameSite: 'none'
           });
           
-          // 重定向到認證成功頁面
-          res.redirect(`${process.env.FRONTEND_URL}/auth-success`);
+          // 使用 302 重定向（臨時重定向）而非默認的 301
+          res.status(302).location(`${process.env.FRONTEND_URL}/auth-success`).send();
           resolve();
         });
       });

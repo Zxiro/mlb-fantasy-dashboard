@@ -1,22 +1,20 @@
 import axios from 'axios';
 
-// Determine the API base URL based on environment
-const API_URL = process.env.REACT_APP_API_URL;
-console.log('API URL:', API_URL); // 調試用
 
-// 明確配置 axios 默認行為
+console.log('API URL:', process.env.REACT_APP_API_URL);
+
 axios.defaults.withCredentials = true;
 
 // Create an axios instance with Yahoo Fantasy API capabilities
 const apiService = axios.create({
-  baseURL: API_URL, // Backend server address from environment variable
+  baseURL: process.env.REACT_APP_API_URL, // Backend server address from environment variable
   withCredentials: true, // Send cookies with requests (important for session handling)
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// 添加請求攔截器，確保每個請求都帶有憑證
+// Make sure to include credentials with every request
 apiService.interceptors.request.use(
   config => {
     console.log(`Making ${config.method} request to ${config.url}`);
